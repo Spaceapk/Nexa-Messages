@@ -1,0 +1,52 @@
+name: Android APK
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract project in build workspace
+        shell: bash
+        run: |
+          if [ -f nexa-source.zip ]; then
+            python3 - <<'PY'
+          import pathlib, zipfile
+          with zipfile.ZipFile('nexa-source.zip') as archive:
+              for entry in archive.infolist():
+                  path = pathlib.PurePosixPath(entry.filename)
+                  if path.is_absolute() or '..' in path.parts or path.parts[0] in ('.git', '.github'):
+                      raise SystemExit('Unexpected archive entry: ' + entry.filename)
+              archive.extractall('.')
+          PY
+          fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Test, lint and build
+        run: gradle --no-daemon testDebugUnitTest lintDebug assembleDebug
+      - name: Upload installable debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nexa-Messages-debug-${{ github.run_number }}
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+      - name: Upload verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
