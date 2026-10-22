@@ -2,6 +2,7 @@ name: Android APK
 on:
   push:
     branches: [main]
+    paths: ['nexa-source.zip', '.github/workflows/android.yml', 'app/**', '*.gradle.kts', 'gradle.properties']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -26,11 +27,13 @@ jobs:
               archive.extractall('.')
           PY
           fi
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-35 build-tools;34.0.0
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
